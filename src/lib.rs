@@ -24,14 +24,14 @@ enum ConnType {
 #[allow(dead_code)]
 pub struct UserInfo {
     typ: ConnType,
-    bbsid: String,
-    record: i32,
-    realname: String,
-    alias: String,
-    seclevel: i32,
-    timeleft: u64,
-    emulation: i32,
-    node: i32,
+    pub bbsid: String,
+    pub record: i32,
+    pub realname: String,
+    pub alias: String,
+    pub seclevel: i32,
+    pub timeleft: u64,
+    pub emulation: i32,
+    pub node: i32,
     timeout: Instant,
     starttime: Instant,
 }
