@@ -1,7 +1,6 @@
 #[cfg(target_family = "unix")]
 use termios::{cfmakeraw, tcsetattr, Termios, TCSANOW};
 
-use anes::{esc, ResetAttributes};
 use std::env;
 use std::fs::read_to_string;
 use std::io;
@@ -12,6 +11,11 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 type Result<T> = std::result::Result<T, io::Error>;
+
+#[macro_export]
+macro_rules! esc {
+    ($($arg:expr),*) => { concat!("\x1B", $($arg),*) };
+}
 
 #[derive(Debug)]
 enum ConnType {
@@ -137,7 +141,8 @@ impl NetUser {
         const TIME_OUT: u64 = 300;
         if self.info.timeout.elapsed().as_secs() >= TIME_OUT {
             let e = esc!("[1;31m");
-            self.write_ln(format!("\r\n\r\n{e}Timeout!{ResetAttributes}").as_str())
+            let r = esc!("[0m");
+            self.write_ln(format!("\r\n\r\n{e}Timeout!{r}").as_str())
                 .expect("write");
             process::exit(0);
         }
@@ -148,7 +153,8 @@ impl NetUser {
         let time_left = self.info.timeleft;
         if start_time.elapsed().as_secs() >= time_left {
             let e = esc!("[1;31m");
-            self.write_ln(format!("\r\n\r\n{e}You're out of time!{ResetAttributes}\r\n").as_str())
+            let r = esc!("[0m");
+            self.write_ln(format!("\r\n\r\n{e}You're out of time!{r}\r\n").as_str())
                 .expect("write");
             process::exit(0);
         }
@@ -221,10 +227,14 @@ impl Conn for User {
     }
 }
 
+pub fn door_clear_screen(user: &mut User) -> Result<()> {
+    user.write_str(format!("{}{}", esc!("[2J"), esc!("[1;1H")).to_string().as_str())
+}
+
 pub fn door_display_file(user: &mut User, path: &str) -> Result<()> {
     if let Ok(file) = std::fs::read(path) {
         user.write(&file)?;
-        user.write_str(ResetAttributes.to_string().as_str())?;
+        user.write_str(esc!("[0m").to_string().as_str())?;
     }
     Ok(())
 }
@@ -258,7 +268,7 @@ pub fn door_read_string(user: &mut impl Conn, len: usize) -> Result<String> {
         }
     }
     let s = std::str::from_utf8(&received).unwrap().to_string();
-    user.write_ln(ResetAttributes.to_string().as_str())?;
+    user.write_ln(esc!("[0m").to_string().as_str())?;
     Ok(s)
 }
 
