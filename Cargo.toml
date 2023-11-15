@@ -1,0 +1,12 @@
+[package]
+name = "doorlib"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anes = "0.1.6"
+
+[target.'cfg(target_family = "unix")'.dependencies]
+termios = "0.3.3"
