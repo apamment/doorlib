@@ -221,7 +221,7 @@ impl Conn for User {
     }
 }
 
-pub fn display_file(user: &mut User, path: &str) -> Result<()> {
+pub fn door_display_file(user: &mut User, path: &str) -> Result<()> {
     if let Ok(file) = std::fs::read(path) {
         user.write(&file)?;
         user.write_str(ResetAttributes.to_string().as_str())?;
@@ -229,7 +229,7 @@ pub fn display_file(user: &mut User, path: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn read_string(user: &mut impl Conn, len: usize) -> Result<String> {
+pub fn door_read_string(user: &mut impl Conn, len: usize) -> Result<String> {
     const BACKSPACE: [u8; 3] = *b"\x08\x20\x08";
 
     user.write_str(esc!("[s"))?;
@@ -312,7 +312,7 @@ fn convert_socket(sock: i64) -> Result<TcpStream> {
     Ok(stream)
 }
 
-pub fn init() -> Result<User> {
+pub fn door_init() -> Result<User> {
     let args = env::args().collect::<Vec<_>>();
     if args.len() < 2 || 3 < args.len() {
         panic!("Usage: door.exe door32.sys [socket]");
