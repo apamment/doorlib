@@ -228,7 +228,11 @@ impl Conn for User {
 }
 
 pub fn door_clear_screen(user: &mut User) -> Result<()> {
-    user.write_str(format!("{}{}", esc!("[2J"), esc!("[1;1H")).to_string().as_str())
+    user.write_str(
+        format!("{}{}", esc!("[2J"), esc!("[1;1H"))
+            .to_string()
+            .as_str(),
+    )
 }
 
 pub fn door_display_file(user: &mut User, path: &str) -> Result<()> {
