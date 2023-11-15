@@ -317,10 +317,11 @@ pub fn init() -> Result<User> {
     if args.len() < 2 || 3 < args.len() {
         panic!("Usage: door.exe door32.sys [socket]");
     }
-    let info = read_door32(&args[1]).expect("read door32.sys");
+    let mut info = read_door32(&args[1]).expect("read door32.sys");
     let fd = if args.len() == 3 {
         let fd = args[2].parse().expect("Socket is an integer");
         if fd > 0 {
+            info.typ = ConnType::Telnet(fd);
             fd
         } else if let ConnType::Telnet(fd) = info.typ {
             fd
