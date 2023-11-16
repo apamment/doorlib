@@ -174,10 +174,7 @@ impl Conn for NetUser {
             state = match (state, rx_byte) {
                 (0, 255) => 1,
                 (0, _) => return Ok(rx_byte),
-                (1, 255) => {
-                    self.stream.write_all(std::slice::from_ref(&rx_byte))?;
-                    0
-                }
+                (1, 255) => return Ok(rx_byte),
                 (1, 250) => 3,
                 (1, _) => 2,
                 (2, _) => 0,
