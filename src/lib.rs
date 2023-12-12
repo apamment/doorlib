@@ -17,6 +17,19 @@ macro_rules! esc {
     ($($arg:expr),*) => { concat!("\x1B", $($arg),*) };
 }
 
+#[macro_export]
+macro_rules! reset {
+    () => {
+        esc!("[0m")
+    };
+}
+
+macro_rules! emph {
+    () => {
+        esc!("[1;31m")
+    };
+}
+
 #[derive(Debug)]
 enum ConnType {
     Local,
@@ -140,9 +153,7 @@ impl NetUser {
     fn maybe_timeout(&mut self) {
         const TIME_OUT: u64 = 300;
         if self.info.timeout.elapsed().as_secs() >= TIME_OUT {
-            let e = esc!("[1;31m");
-            let r = esc!("[0m");
-            self.write_ln(format!("\r\n\r\n{e}Timeout!{r}").as_str())
+            self.write_ln(concat!("\r\n\r\n", emph!(), "Timeout!", reset!()))
                 .expect("write");
             process::exit(0);
         }
@@ -152,10 +163,14 @@ impl NetUser {
         let start_time = self.info.starttime;
         let time_left = self.info.timeleft;
         if start_time.elapsed().as_secs() >= time_left {
-            let e = esc!("[1;31m");
-            let r = esc!("[0m");
-            self.write_ln(format!("\r\n\r\n{e}You're out of time!{r}\r\n").as_str())
-                .expect("write");
+            self.write_ln(concat!(
+                "\r\n\r\n",
+                emph!(),
+                "You're out of time!",
+                reset!(),
+                "\r\n"
+            ))
+            .expect("write");
             process::exit(0);
         }
     }
@@ -224,23 +239,26 @@ impl Conn for User {
     }
 }
 
-pub fn door_clear_screen(user: &mut User) -> Result<()> {
-    user.write_str(
-        format!("{}{}", esc!("[2J"), esc!("[1;1H"))
-            .to_string()
-            .as_str(),
-    )
-}
-
-pub fn door_display_file(user: &mut User, path: &str) -> Result<()> {
-    if let Ok(file) = std::fs::read(path) {
-        user.write(&file)?;
-        user.write_str(esc!("[0m").to_string().as_str())?;
+pub mod screen {
+    use crate::{esc, Conn, Result, User};
+    const CLEAR: &'static str = concat!(esc!("[2J"), esc!("H"));
+    pub fn clear(user: &mut User) -> Result<()> {
+        user.write_str(CLEAR)
     }
-    Ok(())
 }
 
-pub fn door_read_string(user: &mut impl Conn, len: usize) -> Result<String> {
+pub mod file {
+    use crate::{Conn, Result, User};
+    pub fn display(user: &mut User, path: &str) -> Result<()> {
+        if let Ok(file) = std::fs::read(path) {
+            user.write(&file)?;
+            user.write_str(reset!())?;
+        }
+        Ok(())
+    }
+}
+
+pub fn read_string(user: &mut impl Conn, len: usize) -> Result<String> {
     const BACKSPACE: [u8; 3] = *b"\x08\x20\x08";
 
     user.write_str(esc!("[s"))?;
@@ -259,17 +277,17 @@ pub fn door_read_string(user: &mut impl Conn, len: usize) -> Result<String> {
             127 | 8 => {
                 if !received.is_empty() {
                     user.write(&BACKSPACE)?;
-                    received.truncate(received.len() - 1);
+                    received.pop();
                 }
             }
             _ => {
                 user.write(std::slice::from_ref(&ch))?;
-                received.extend_from_slice(&[ch]);
+                received.push(ch);
             }
         }
     }
-    let s = std::str::from_utf8(&received).unwrap().to_string();
-    user.write_ln(esc!("[0m").to_string().as_str())?;
+    let s = String::from_utf8(received).unwrap();
+    user.write_ln(reset!())?;
     Ok(s)
 }
 
@@ -323,7 +341,7 @@ fn convert_socket(sock: i64) -> Result<TcpStream> {
     Ok(stream)
 }
 
-pub fn door_init() -> Result<User> {
+pub fn init() -> Result<User> {
     let args = env::args().collect::<Vec<_>>();
     if args.len() < 2 || 3 < args.len() {
         panic!("Usage: door.exe door32.sys [socket]");
